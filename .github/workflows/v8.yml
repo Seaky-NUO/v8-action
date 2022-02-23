@@ -69,7 +69,7 @@ jobs:
         7z a v8.7z ./v8.zip -v2048m
     - name: Uploading assets...
       id: upload-release-v8 
-      uses: actions/upload-release-v8@v1
+      uses: actions/v8-action@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
