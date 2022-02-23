@@ -13,8 +13,8 @@ on:
   #   types: started
 
 env:
-  PATCH_FLAG: true
-  COMMIT: a7a350012c05f644f3f373fb48d7ac72f7f60542
+  PATCH_FLAG: false
+  COMMIT: 0
   DEPOT_UPLOAD: true
   SRC_UPLOAD: true
   BINARY_UPLOAD: false
@@ -62,32 +62,19 @@ jobs:
         source ~/.bash_profile
         gclient sync -f
     
-    # compress this file
-    - name: zip depot_tools
-      if: env.DEPOT_UPLOAD == 'true' && !cancelled()
-      run: |
-        zip -q -r depot_tools.zip depot_tools
-        
-    # 7zip v8 src
+    # compress this file 7zip v8 src and Upload
     - name: 7zip v8_src
       run: |
         zip -q -r v8.zip v8
         7z a v8.7z ./v8.zip -v2048m
-    
-    # upload depot_tools.zip to cowtransfer
-    - name: upload depot_tools
-      if: env.DEPOT_UPLOAD == 'true' && !cancelled()
-      run: |
-        curl -fsSL git.io/file-transfer | sh
-        ./transfer cow --block 2621440 -s -p 64 --no-progress depot_tools.zip 2>&1 | tee cowtransfer.log
-        echo "::warning file=cowtransfer.com::$(cat cowtransfer.log | grep https)"
-   
-    # upload v8.zip to cowtransfer
-    - name: upload v8_src
-      if: env.SRC_UPLOAD == 'true' && !cancelled()
-      run: |
-        curl -fsSL git.io/file-transfer | sh
-        ./transfer cow --block 2621440 -s -p 64 --no-progress v8.7z.001 2>&1 | tee cowtransfer.log
-        echo "::warning file=cowtransfer.com::$(cat cowtransfer.log | grep https)"
-        ./transfer cow --block 2621440 -s -p 64 --no-progress v8.7z.002 2>&1 | tee cowtransfer.log
-        echo "::warning file=cowtransfer.com::$(cat cowtransfer.log | grep https)"
+    - name: Uploading assets...
+      id: upload-release-v8 
+      uses: actions/upload-release-v8@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./v8.zip
+        asset_name: v8.zip
+        asset_content_type: application/gzip
+      
