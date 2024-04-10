@@ -43,7 +43,7 @@ jobs:
 
     - name: Generate build files
       run: |
-        tools/dev/v8gen.py x64.release
+        gn gen out.gn/linux_64/release --args="target_cpu=\"x64\" v8_target_cpu=\"x64\" is_debug=false is_clang=true use_sysroot=false v8_monolithic=true is_component_build=false use_custom_libcxx=false treat_warnings_as_errors=false v8_use_external_startup_data=false v8_static_library=true"
 
     - name: Build V8
       run: |
