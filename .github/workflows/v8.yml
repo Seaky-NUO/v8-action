@@ -1,80 +1,50 @@
-#===================================================
-# Description: Build v8 enginer using GitHub Actions
-# Author: t1an5t
-#===================================================
+name: Build V8
 
+on: [push]
 
-name: BUILD v8
-
-on:
-  push:
-    branches: [ master ]
-  # watch:
-  #   types: started
-
-env:
-  PATCH_FLAG: false
-  COMMIT: 0
-  DEPOT_UPLOAD: true
-  SRC_UPLOAD: true
-  BINARY_UPLOAD: false
-
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-18.04
-    if: github.event.repository.owner.id == github.event.sender.id 	
-    
+    runs-on: ubuntu-16.04
+
     steps:
-    - name: Checkout
-      uses: actions/checkout@master
-      
-    # init ubuntu1804 environment
-    - name: init env
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get -y install pkg-config git subversion curl wget build-essential python xz-utils zip p7zip-full
-    
-    # get depot_tools
-    - name: depot_tools
+        sudo apt-get install -y build-essential git python pkg-config libnss3-dev libgconf-2-4
+        # Add any other dependencies needed for V8 compilation
+
+    - name: Clone V8 repository
       run: |
         git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
-        echo export PATH=\"\$PATH:`pwd`/depot_tools/\" >> ~/.bash_profile
-    
-    # fetch v8 source code
-    - name: fetch v8
+        export PATH="$PWD/depot_tools:$PATH"
+
+    - name: Checkout V8 branch
       run: |
-        source ~/.bash_profile
+        cd depot_tools
         fetch v8
         cd v8
-    
-    # patch source code
-    - name: patch v8
-      if: env.PATCH_FLAG == 'true' && !cancelled()
+        gclient sync -r remotes/branch-heads/8.9
+
+    - name: Sync V8
       run: |
-        cd v8
-        git reset --hard $COMMIT
-        cd ..
-        
-    - name: build v8
+        gclient sync
+
+    - name: Install build dependencies
       run: |
-        source ~/.bash_profile
-        gclient sync -f
-    
-    # compress this file 7zip v8 src and Upload
-    - name: 7zip v8_src
+        ./build/install-build-deps.sh
+
+    - name: Generate build files
       run: |
-        zip -q -r v8.zip v8
-        7z a v8.7z ./v8.zip -v2048m
-    - name: Uploading assets...
-      id: upload-release-v8 
-      uses: actions/v8-action@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./v8.zip
-        asset_name: v8.zip
-        asset_content_type: application/gzip
-      
+        tools/dev/v8gen.py x64.release
+
+    - name: Build V8
+      run: |
+        ninja -C out.gn/x64.release
