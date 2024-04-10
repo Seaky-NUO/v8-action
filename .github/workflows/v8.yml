@@ -47,4 +47,4 @@ jobs:
 
     - name: Build V8
       run: |
-        ninja -C out.gn/x64.release
+        ninja -C out.gn/linux_64/release v8_monolith
